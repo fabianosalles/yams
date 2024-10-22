@@ -27,7 +27,7 @@ type
 
 type
   TField = class
-  private
+  strict private
     FOffScreen : TBitmap;
     FWidth: integer;
     FCells: TFieldCellsArray;
@@ -40,6 +40,7 @@ type
     FGameTime: integer;
     FGameState : TGameState;
     FSmileSprite: TSmileSprite;
+
     procedure SetSmileSprite(const Value: TSmileSprite);
     procedure SetGameTime(const Value: integer);
     procedure SetFlags(const Value: integer);
@@ -53,18 +54,20 @@ type
     procedure CalculateNearBombs( X, Y: integer );
     procedure PaintCell( Canvas: TCanvas; X, Y: integer; Rect: TRect );
     procedure DrawBorder(Canvas: TCanvas; Cell: TFieldCell; Rect: TRect);
-    procedure DrawBeveledBorder(Canvas: TCanvas; Cell: TFieldCell; Rect: TRect;
-                               Inverse: boolean=false);
-    procedure RevealAdjacents( X, Y: integer );
     function  AdjacentsOf( X, Y: integer; Cross: boolean=false ) : TArrayOfPoints;
     function  InBounds( p : Tpoint ) : boolean;
   public
-    constructor Create( Lines: byte=16; Columns: byte=16; Bombs: integer=40 );
+    constructor Create(Images: TImageList; Lines: byte=16; Columns: byte=16; Bombs: integer=40);
+    destructor Free;
+
     procedure NewGame( Lines: byte=16; Columns: byte=16; Bombs: integer=40 );
     procedure RevealAllBombs;
     procedure RevealAllCells;
     procedure SaveToFile( const FileName : string );
     procedure PaintTo( Canvas : TCanvas );
+    procedure RevealAdjacents( X, Y: integer );
+    procedure DrawBeveledBorder(Canvas: TCanvas; Cell: TFieldCell; Rect: TRect; Inverse: boolean=false);
+
     property Width  : integer read FWidth write SetWidth;
     property Height : integer read FHeight write SetHeight;
     property Cells  : TFieldCellsArray read FCells write SetCells;
@@ -73,8 +76,11 @@ type
     property Bombs : integer read FBombs;
     property Flags : integer read FFlags write SetFlags;
     property GameTime: integer read FGameTime write SetGameTime;
-    property GameState: TGameState read FGameState;
+    property GameState: TGameState read FGameState write FGameState;
     property SmileSprite : TSmileSprite read FSmileSprite write SetSmileSprite;
+
+    property ActualMouseDown : TPoint read FActualMouseDown write FActualMouseDown;
+    property ExplosionAt : TPoint read FExplosionAt write FExplosionAt;
   end;
 
 
@@ -94,8 +100,6 @@ type
     SaveToFile1: TMenuItem;
     RevealAll1: TMenuItem;
     RevealBombs1: TMenuItem;
-    lblBombs: TStaticText;
-    lblTime: TStaticText;
     Timer1: TTimer;
     btnNew: TSpeedButton;
     Difficulty1: TMenuItem;
@@ -105,6 +109,10 @@ type
     ExtraHard1: TMenuItem;
     Image1: TImage;
     Image2: TImage;
+    Panel2: TPanel;
+    lblBombs: TLabel;
+    Panel3: TPanel;
+    lblTime: TLabel;
     procedure Exit1Click(Sender: TObject);
     procedure About1Click(Sender: TObject);
     procedure ExtraHard1Click(Sender: TObject);
@@ -255,10 +263,22 @@ begin
       end;
 end;
 
-constructor TField.Create(Lines: byte=16; Columns: byte=16; Bombs: integer=40);
+constructor TField.Create(Images: TImageList;
+  Lines: byte=16; Columns: byte=16; Bombs: integer=40);
+var
+  i : integer;
 begin
-  Self.NewGame(Lines, Columns, Bombs);  
+  for i := 0 to 3 do
+  begin
+    FSmileSprite[i] := TBitmap.Create();
+    Images.GetBitmap(i+2, FSmileSprite[i]);
+  end;
+
+  FImages := Images;
+  FSmileSprite := SmileSprite;
+  NewGame(Lines, Columns, Bombs);
 end;
+
 
 procedure TField.DrawBeveledBorder(Canvas: TCanvas; Cell: TFieldCell;
   Rect: TRect; Inverse: boolean=false);
@@ -303,6 +323,21 @@ begin
    end;
 end;
 
+destructor TField.Free;
+var
+  i: integer;
+begin
+  if (Assigned(FOffScreen)) then
+    FOffScreen.Free;
+
+  for i := Low(FSmileSprite) to High(FSmileSprite) do
+  begin
+    if (Assigned(FSmileSprite[i])) then
+      FSmileSprite[i].Free;
+  end;
+
+end;
+
 function TField.InBounds(p: Tpoint): boolean;
 begin
   result := (
@@ -341,6 +376,7 @@ procedure TField.NewGame(Lines: byte=16; Columns: byte=16; Bombs: integer=40);
 begin
   if not(Assigned(FOffScreen)) then
      FOffScreen := TBitmap.Create();
+
   Width := (Lines * CELL_W);
   Height := (Columns * CELL_H);
   FExplosionAt.X := -1;
@@ -356,6 +392,7 @@ begin
   FActualMouseDown.X := -10;
   FActualMouseDown.Y := -10;
   SetLength(FCells, Lines, Columns);
+
   MakeRandomMap(Bombs);
 end;
 
@@ -436,6 +473,7 @@ begin
         r.Bottom := r.Top + CELL_H;
         PaintCell(FOffScreen.Canvas, i, j, r);
       end;
+
   Canvas.CopyRect(Canvas.ClipRect, FOffScreen.Canvas, FOffScreen.Canvas.ClipRect);
 end;
 
@@ -647,14 +685,10 @@ procedure TfrmMain.FormCreate(Sender: TObject);
 var
   i: integer;
 begin
-  FFiled := TField.Create();
-  FFiled.Images := ImgList;
-  for i := 0 to 3 do
-    begin
-      FFiled.FSmileSprite[i] := TBitmap.Create();
-      ImgList.GetBitmap(
-      i+2, FFiled.SmileSprite[i]);
-    end;
+  ReportMemoryLeaksOnShutdown := true;
+
+  FFiled := TField.Create(ImgList);
+
   New1Click(nil);
 end;
 
@@ -698,7 +732,7 @@ begin
             New1Click(nil);
           end;
 
-  FFiled.NewGame(16,16, bombs);
+  FFiled.NewGame(16, 16, bombs);
   FFiled.PaintTo(PaintBox1.Canvas);
   btnNew.Glyph.Assign(FFiled.SmileSprite[0]);
   AdjustLabels();
@@ -721,7 +755,7 @@ begin
       case Button of
         mbLeft:
           begin
-            FFiled.FActualMouseDown := p;
+            FFiled.ActualMouseDown := p;
             c := FFiled.Cells[p.X, p.Y];
             if not(c.Revealed) then
               begin
@@ -730,8 +764,8 @@ begin
                 r.Top    := p.Y * CELL_H;
                 r.Bottom := r.Top + CELL_W;
                 if FFiled.Cells[p.X, p.Y].HasBomb then
-                   FFiled.FExplosionAt := p;
-                FFiled.DrawBeveledBorder(FFiled.FOffScreen.Canvas, c, r, True);
+                   FFiled.ExplosionAt := p;
+
                 FFiled.PaintTo(PaintBox1.Canvas);
               end;
           end;
@@ -757,7 +791,7 @@ begin
 
   if GetKeyState(VK_LBUTTON)< 0 then
     begin
-      FFiled.FActualMouseDown := p;
+      FFiled.ActualMouseDown := p;
       if not(c.Revealed) then
         begin
           FFiled.PaintTo(PaintBox1.Canvas);
@@ -773,10 +807,10 @@ var
 begin
   p := CellAt(X,Y);
   
-  case FFiled.FGameState of
+  case FFiled.GameState of
     gsStoped :
        begin
-        FFiled.FGameState := gsPlaying;
+        FFiled.GameState := gsPlaying;
         Timer1.Enabled := True;
         btnNew.Glyph.Assign(FFiled.SmileSprite[0]);
        end;
@@ -808,7 +842,7 @@ begin
               begin
                  //the player loses
                  Timer1.Enabled := False;
-                 FFiled.FGameState := gsGameOver;
+                 FFiled.GameState := gsGameOver;
                  FFiled.RevealAllBombs;
                  btnNew.Glyph.Assign(FFiled.SmileSprite[2]);
               end
@@ -844,7 +878,7 @@ begin
 
            if (FFiled.DiscoveredBombs >= FFiled.Bombs) then
              begin
-               FFiled.FGameState := gsGameFinished;
+               FFiled.GameState := gsGameFinished;
                btnNew.Glyph.Assign(FFiled.SmileSprite[3]);
              end;
 
@@ -858,9 +892,9 @@ begin
   FFiled.PaintTo(PaintBox1.Canvas);
 
   //the user win the game...
-  if (FFiled.FDiscoveredBombs =  FFiled.Bombs) then
+  if (FFiled.DiscoveredBombs =  FFiled.Bombs) then
     begin
-       FFiled.FGameState := gsGameFinished;
+       FFiled.GameState := gsGameFinished;
        Timer1.Enabled := false;
        //ShowMessage('Congratullations!!!'#13#10'You discovered all the bombs.');
        FFiled.RevealAllCells;

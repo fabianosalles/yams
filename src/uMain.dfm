@@ -15,7 +15,7 @@ object frmMain: TfrmMain
   Font.Name = 'Tahoma'
   Font.Style = []
   Menu = MainMenu1
-  Position = poDesktopCenter
+  Position = poScreenCenter
   OnClose = FormClose
   OnCreate = FormCreate
   OnPaint = FormPaint
@@ -36,6 +36,7 @@ object frmMain: TfrmMain
     Height = 39
     Align = alTop
     BevelOuter = bvLowered
+    ParentBackground = False
     TabOrder = 0
     object btnNew: TSpeedButton
       Left = 113
@@ -76,7 +77,7 @@ object frmMain: TfrmMain
       OnClick = New1Click
     end
     object Image1: TImage
-      Left = 55
+      Left = 60
       Top = 13
       Width = 16
       Height = 16
@@ -97,7 +98,7 @@ object frmMain: TfrmMain
       Transparent = True
     end
     object Image2: TImage
-      Left = 185
+      Left = 180
       Top = 13
       Width = 16
       Height = 16
@@ -117,45 +118,60 @@ object frmMain: TfrmMain
         3333}
       Transparent = True
     end
-    object lblBombs: TStaticText
-      Left = 8
-      Top = 8
-      Width = 45
-      Height = 25
-      Alignment = taCenter
-      AutoSize = False
-      BevelInner = bvLowered
-      BorderStyle = sbsSunken
-      Caption = '000'
-      Color = clBlack
-      Font.Charset = DEFAULT_CHARSET
-      Font.Color = clRed
-      Font.Height = -27
-      Font.Name = 'Terminal'
-      Font.Style = []
-      ParentColor = False
-      ParentFont = False
+    object Panel2: TPanel
+      Left = 1
+      Top = 1
+      Width = 60
+      Height = 37
+      Align = alLeft
+      BevelOuter = bvNone
+      ParentBackground = False
       TabOrder = 0
+      object lblBombs: TLabel
+        Left = 8
+        Top = 8
+        Width = 45
+        Height = 25
+        Alignment = taCenter
+        AutoSize = False
+        Caption = '000'
+        Color = clBtnFace
+        Font.Charset = DEFAULT_CHARSET
+        Font.Color = clBtnText
+        Font.Height = -27
+        Font.Name = 'Terminal'
+        Font.Style = []
+        ParentColor = False
+        ParentFont = False
+      end
     end
-    object lblTime: TStaticText
-      Left = 204
-      Top = 8
-      Width = 45
-      Height = 25
-      Alignment = taCenter
-      AutoSize = False
-      BevelInner = bvLowered
-      BorderStyle = sbsSunken
-      Caption = '000'
-      Color = clBlack
-      Font.Charset = DEFAULT_CHARSET
-      Font.Color = clRed
-      Font.Height = -27
-      Font.Name = 'Terminal'
-      Font.Style = []
-      ParentColor = False
-      ParentFont = False
+    object Panel3: TPanel
+      Left = 195
+      Top = 1
+      Width = 60
+      Height = 37
+      Align = alRight
+      BevelOuter = bvNone
+      ParentBackground = False
       TabOrder = 1
+      ExplicitLeft = 199
+      object lblTime: TLabel
+        Left = 7
+        Top = 8
+        Width = 45
+        Height = 25
+        Alignment = taCenter
+        AutoSize = False
+        Caption = '000'
+        Color = clBlack
+        Font.Charset = DEFAULT_CHARSET
+        Font.Color = clBtnText
+        Font.Height = -27
+        Font.Name = 'Terminal'
+        Font.Style = []
+        ParentColor = False
+        ParentFont = False
+      end
     end
   end
   object MainMenu1: TMainMenu
